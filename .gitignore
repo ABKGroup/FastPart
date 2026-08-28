@@ -1,0 +1,4 @@
+external/
+__pycache__/
+*.pyc
+*_fastpart_k*/
