@@ -1,6 +1,6 @@
 """fastpart CLI.
 
-    python -m fastpart.cli INSTANCE.hgr K [--eps 2] [--time 300] [--no-kep]
+    python -m fastpart.cli INSTANCE.hgr K [--eps 2] [--time 300]
 """
 
 from __future__ import annotations
