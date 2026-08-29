@@ -34,7 +34,7 @@ def align_labels(base: list[int], other: list[int], k: int,
 
 
 def consensus_and_clean(hg: Hypergraph, candidates: list[list[int]], k: int,
-                        eps_pct: float, border_cap: int = 9000,
+                        eps_pct: float, border_cap: int = 4000,
                         ilp_time_s: float = 60.0, workers: int = 16):
     """Returns (labels, cut, patched: bool). candidates must all be feasible."""
     scored = sorted(((full_cut(hg, c), c) for c in candidates), key=lambda t: t[0])
@@ -89,6 +89,9 @@ def consensus_and_clean(hg: Hypergraph, candidates: list[list[int]], k: int,
     model.set_warning_stream(None)
     model.parameters.timelimit.set(ilp_time_s)
     model.parameters.threads.set(workers)
+    # CPLEX's wall limit is advisory during presolve on big models; the
+    # deterministic limit is honored strictly (ticks ~ ms on this class)
+    model.parameters.dettimelimit.set(ilp_time_s * 1000.0)
     model.objective.set_sense(model.objective.sense.minimize)
 
     xname = [[f"x{i}_{b}" for b in range(k)] for i in range(len(border))]

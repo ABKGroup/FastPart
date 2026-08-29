@@ -13,7 +13,8 @@ eps/(K-1) shrink variant whose upper bound alone guarantees two-sided
 feasibility. A small success-weighted chooser (valid-rate x cut rank) tilts
 the mix as evidence arrives.
 
-This branch is the KEP-free controller (paper §3.1 without expert family 1).
+Default mode is the controller alone; --kep enables the AL-FM (§3.3) and C&C
+(§3.4) refinement stages in the tail.
 """
 
 from __future__ import annotations
@@ -143,7 +144,7 @@ class Pool:
 
 
 def solve(hgr_path: str, k: int, eps: float, *, time_s: float = 300.0,
-          threads: int = 0, seed: int = 0,
+          threads: int = 0, seed: int = 0, use_kep: bool = False,
           workdir: str | None = None, log=print) -> dict:
     import os
     t0 = time.time()
@@ -261,7 +262,7 @@ def solve(hgr_path: str, k: int, eps: float, *, time_s: float = 300.0,
     # ---- tail: AL-FM touch, C&C recombination, final polish ----------------
     # AL-FM touch only when the python-side cost fits the remaining budget
     alfm_budget = deadline - 25 - time.time()
-    if pool.best is not None and alfm_budget > 20 and hg.n <= 300_000:
+    if use_kep and pool.best is not None and alfm_budget > 20 and hg.n <= 300_000:
         touched = ALFM(hg, list(pool.best.labels), k, eps, seed=seed,
                        inc=inc).refine(passes=3,
                                        deadline=time.time() + alfm_budget)
@@ -269,7 +270,7 @@ def solve(hgr_path: str, k: int, eps: float, *, time_s: float = 300.0,
         if ok and c < pool.best.cut:
             pool.admit(Candidate(touched, c, "followon", "alfm"))
             log(f"[{time.time()-t0:6.1f}s] alfm: cut={c}")
-    if len(pool.members) >= 2 and time.time() < deadline - 25 and hg.n <= 700_000:
+    if use_kep and len(pool.members) >= 2 and time.time() < deadline - 25 and hg.n <= 700_000:
         tops = sorted(pool.members, key=lambda c: c.cut)
         base = tops[0]
         partner = max(tops[1:5], key=lambda c: sum(
@@ -308,4 +309,4 @@ def solve(hgr_path: str, k: int, eps: float, *, time_s: float = 300.0,
     return dict(ok=True, cut=c, feasible=ok, block_weights=w,
                 partition=str(out_path), family=best.family,
                 template=best.template, wall_s=round(time.time() - t0, 1),
-                mode="wrapper")
+                mode="kep" if use_kep else "no-kep")

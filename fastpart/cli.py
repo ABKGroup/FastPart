@@ -37,13 +37,15 @@ def main() -> int:
     ap.add_argument("--time", type=float, default=300.0)
     ap.add_argument("--threads", type=int, default=0, help="0 = all vCPUs")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--kep", action="store_true",
+                    help="enable the AL-FM and C&C refinement stages (see README for budget guidance)")
     ap.add_argument("--workdir", default=None)
     ap.add_argument("--out-json", default=None)
     a = ap.parse_args()
 
     from .controller import solve
     res = solve(a.hypergraph, a.k, a.eps, time_s=a.time, threads=a.threads,
-                seed=a.seed, workdir=a.workdir)
+                seed=a.seed, use_kep=a.kep, workdir=a.workdir)
     print(json.dumps(res, indent=1))
     if a.out_json:
         with open(a.out_json, "w") as f:
