@@ -1,9 +1,11 @@
 # FastPart — camera-ready best partitions (Titan23, ε = 2 %, K = 2/3/4)
 
-This repository holds the partitions produced by the camera-ready FastPart solver
+This repository holds the partitions produced by an improved to-be-released FastPart solver
 (developed under the internal codename **CORD**) on the 22 Titan23 designs at ε = 2 %
 for K = 2, 3 and 4 — 66 cells in total. Benchmarks are not redistributed here; only the
-resulting assignments.
+resulting assignments. For the actual FastPart solver which appeared at ICCAD 2026, see the src branch called shipped-src in this same repo (shipped-src should replicate results in the paper, while the cuts in the main branch are better than what the paper reports).
+
+CORD is under active development and iteration, and will be hopefully released soon. 
 
 Every cut in the table below was re-scored, immediately before publication, by the
 independent golden evaluator directly from the `.part` file shipped in
