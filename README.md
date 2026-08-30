@@ -13,9 +13,12 @@ python3 -m fastpart.cli design.hgr K --eps 2 --time 600 --kep    # with refineme
 
 `--eps` is the absolute two-sided imbalance in percent (K=4, ε=2 → every block
 holds 23–27 % of the total weight). All vCPUs are used by default
-(`--threads N` to limit). Requires Python 3.10+, numpy, scipy. The CPLEX Python
-API is optional: without it the recombination stage returns the better
-original candidate.
+(`--threads N` to limit). Requires Python 3.10+, numpy, scipy.
+
+The recombination stage (`--kep`) needs an ILP solver. `--ilp-backend`
+selects it: `auto` (default) uses CPLEX if its Python API is installed,
+otherwise OR-Tools CP-SAT (`pip install ortools`); `cplex` or `ortools` force
+one. With neither installed the stage returns the better original candidate.
 
 ## Modes and budgets
 

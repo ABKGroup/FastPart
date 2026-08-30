@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .alfm import ALFM
-from .cnc import consensus_and_clean
+from .cnc import available_backends, consensus_and_clean, resolve_backend
 from .evaluator import evaluate
 from .hgr import read_hgr
 import sys as _sys
@@ -145,6 +145,7 @@ class Pool:
 
 def solve(hgr_path: str, k: int, eps: float, *, time_s: float = 300.0,
           threads: int = 0, seed: int = 0, use_kep: bool = False,
+          ilp_backend: str = "auto",
           workdir: str | None = None, log=print) -> dict:
     import os
     t0 = time.time()
@@ -177,6 +178,9 @@ def solve(hgr_path: str, k: int, eps: float, *, time_s: float = 300.0,
             return c
         return None
 
+    if use_kep and not resolve_backend(ilp_backend):
+        log(f"warning: ILP backend '{ilp_backend}' unavailable (installed: "
+            f"{available_backends() or 'none'}); the C&C stage will be skipped")
     # ---- main portfolio loop: keep all lanes busy until the tail -----------
     lanes = threads
     running: list[tuple[str, Template, subprocess.Popen, float]] = []
@@ -279,10 +283,14 @@ def solve(hgr_path: str, k: int, eps: float, *, time_s: float = 300.0,
         if partner is not None:
             merged, mcut, patched = consensus_and_clean(
                 hg, [base.labels, partner.labels], k, eps,
-                ilp_time_s=max(10.0, min(90.0, deadline - time.time() - 8)))
+                ilp_time_s=max(10.0, min(90.0, deadline - time.time() - 8)),
+                workers=max(1, min(threads, 32)), backend=ilp_backend)
+            be = resolve_backend(ilp_backend) or "none"
             if patched:
                 pool.admit(Candidate(merged, mcut, "followon", "cnc"))
-                log(f"[{time.time()-t0:6.1f}s] cnc: merged to {mcut}")
+                log(f"[{time.time()-t0:6.1f}s] cnc[{be}]: merged to {mcut}")
+            else:
+                log(f"[{time.time()-t0:6.1f}s] cnc[{be}]: no improvement over {base.cut}")
     best = pool.best
     if best is not None and time.time() < deadline - 10:
         warm = str(wd / "final_warm.part")

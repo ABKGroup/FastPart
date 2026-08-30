@@ -39,13 +39,17 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--kep", action="store_true",
                     help="enable the AL-FM and C&C refinement stages (see README for budget guidance)")
+    ap.add_argument("--ilp-backend", choices=["auto", "cplex", "ortools"], default="auto",
+                    help="ILP solver for the C&C stage (--kep): auto = CPLEX if installed, "
+                         "else OR-Tools CP-SAT, else the stage is skipped")
     ap.add_argument("--workdir", default=None)
     ap.add_argument("--out-json", default=None)
     a = ap.parse_args()
 
     from .controller import solve
     res = solve(a.hypergraph, a.k, a.eps, time_s=a.time, threads=a.threads,
-                seed=a.seed, use_kep=a.kep, workdir=a.workdir)
+                seed=a.seed, use_kep=a.kep, ilp_backend=a.ilp_backend,
+                workdir=a.workdir)
     print(json.dumps(res, indent=1))
     if a.out_json:
         with open(a.out_json, "w") as f:
