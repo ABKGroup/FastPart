@@ -4,7 +4,7 @@ The controller keeps every vCPU busy for the whole budget with a weighted
 roster of engine templates (preset x mode x threads x eps-variant), gates
 every finished run through repair + the golden two-sided evaluator into a
 feasible-only pool, intensifies incumbents with warm V-cycles, and spends the
-tail on localized exact recombination (C&C, CPLEX) plus a final polish.
+tail on localized exact recombination (C&C) plus a final polish.
 
 Template roster (ported from the original FastPart wrapper, re-expressed for
 the modern engine): K=2 leans on quality-preset RECURSIVE-BISECTION at small

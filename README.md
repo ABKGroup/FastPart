@@ -15,10 +15,18 @@ python3 -m fastpart.cli design.hgr K --eps 2 --time 600 --kep    # with refineme
 holds 23–27 % of the total weight). All vCPUs are used by default
 (`--threads N` to limit). Requires Python 3.10+, numpy, scipy.
 
-The recombination stage (`--kep`) needs an ILP solver. `--ilp-backend`
-selects it: `auto` (default) uses CPLEX if its Python API is installed,
-otherwise OR-Tools CP-SAT (`pip install ortools`); `cplex` or `ortools` force
-one. With neither installed the stage returns the better original candidate.
+The recombination stage (`--kep`) needs an ILP solver; either of two is
+enough, and neither is required to run the solver.
+
+`--ilp-backend auto` (the default) prefers CPLEX and falls back to OR-Tools
+CP-SAT (`pip install ortools`) when CPLEX is missing **or fails at solve
+time**. That second case is the common one: `pip install cplex` gives the
+Community Edition, whose 1000-variable limit is exceeded by every real border
+window, so a pip-CPLEX machine ends up on CP-SAT. A full CPLEX installation
+solves the stage directly. Pass `cplex` or `ortools` to pin one backend — a
+pinned backend never silently switches, and an unavailable one is reported at
+startup. With neither installed the stage returns the better original
+candidate and everything else runs unchanged.
 
 ## Modes and budgets
 

@@ -40,8 +40,9 @@ def main() -> int:
     ap.add_argument("--kep", action="store_true",
                     help="enable the AL-FM and C&C refinement stages (see README for budget guidance)")
     ap.add_argument("--ilp-backend", choices=["auto", "cplex", "ortools"], default="auto",
-                    help="ILP solver for the C&C stage (--kep): auto = CPLEX if installed, "
-                         "else OR-Tools CP-SAT, else the stage is skipped")
+                    help="ILP solver for the C&C stage (--kep): auto prefers CPLEX and "
+                         "falls back to OR-Tools CP-SAT if CPLEX is absent or fails; "
+                         "with neither installed the stage is skipped")
     ap.add_argument("--workdir", default=None)
     ap.add_argument("--out-json", default=None)
     a = ap.parse_args()
