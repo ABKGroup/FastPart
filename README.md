@@ -35,6 +35,13 @@ candidate and everything else runs unchanged.
 | default | the portfolio controller: engine templates, warm follow-ons, feasible-only pool | 300 s |
 | `--kep` | the controller plus the AL-FM and Consensus-and-Clean refinement stages in the tail | **600 s** (≈2× default) |
 
+`--kep` reserves a slice of the budget for the refinement stages rather than
+extending the run, so wall time tracks `--time` in both modes; give it the
+larger budget above so the stages are not paid for out of exploration. Every
+run reports what actually happened under `"stages"` in its JSON — whether each
+stage ran, how long it took, which ILP backend solved, the disagreement
+frontier it worked on, and whether it improved the incumbent.
+
 The refinement stages need room to work: at the default budget they often only
 reproduce the controller's incumbent, while at roughly twice the budget they
 have produced the best result on some cells. Use the default mode for

@@ -43,6 +43,8 @@ def main() -> int:
                     help="ILP solver for the C&C stage (--kep): auto prefers CPLEX and "
                          "falls back to OR-Tools CP-SAT if CPLEX is absent or fails; "
                          "with neither installed the stage is skipped")
+    ap.add_argument("--ablate-stages", action="store_true",
+                    help="debug: use --kep's budget split but skip AL-FM and C&C")
     ap.add_argument("--workdir", default=None)
     ap.add_argument("--out-json", default=None)
     a = ap.parse_args()
@@ -50,6 +52,7 @@ def main() -> int:
     from .controller import solve
     res = solve(a.hypergraph, a.k, a.eps, time_s=a.time, threads=a.threads,
                 seed=a.seed, use_kep=a.kep, ilp_backend=a.ilp_backend,
+                ablate_stages=a.ablate_stages,
                 workdir=a.workdir)
     print(json.dumps(res, indent=1))
     if a.out_json:
