@@ -97,40 +97,55 @@ def _solve_cplex(m: dict, ilp_time_s: float, workers: int):
     model.parameters.dettimelimit.set(ilp_time_s * 1000.0)
     model.objective.set_sense(model.objective.sense.minimize)
 
+    # Everything is batched into one variables.add and one linear_constraints.add:
+    # per-row calls cost more than the solve itself on a 4000-vertex window
+    # (~80k API round-trips), which is what used to overrun the time budget.
     xname = [[f"x{i}_{b}" for b in range(k)] for i in range(len(border))]
+    names, types, obj = [], [], []
     for i in range(len(border)):
-        model.variables.add(names=xname[i], types="B" * k, obj=[0.0] * k)
-        model.linear_constraints.add(
-            lin_expr=[cplex.SparsePair(xname[i], [1.0] * k)], senses="E", rhs=[1.0])
+        names.extend(xname[i])
+        types.append("B" * k)
+        obj.extend([0.0] * k)
+    rows, senses, rhs = [], [], []
+    for i in range(len(border)):
+        rows.append(cplex.SparsePair(xname[i], [1.0] * k))
+        senses.append("E")
+        rhs.append(1.0)
     # balance rows with pseudo-vertex offsets
+    wts = [float(m["weights"][v]) for v in border]
     for b in range(k):
-        names = [xname[idx[v]][b] for v in border]
-        wts = [float(m["weights"][v]) for v in border]
-        model.linear_constraints.add(
-            lin_expr=[cplex.SparsePair(names, wts)], senses="L",
-            rhs=[float(m["U"] - m["outside"][b])])
-        model.linear_constraints.add(
-            lin_expr=[cplex.SparsePair(names, wts)], senses="G",
-            rhs=[float(m["L"] - m["outside"][b])])
+        bn = [xname[idx[v]][b] for v in border]
+        rows.append(cplex.SparsePair(bn, wts))
+        senses.append("L")
+        rhs.append(float(m["U"] - m["outside"][b]))
+        rows.append(cplex.SparsePair(bn, wts))
+        senses.append("G")
+        rhs.append(float(m["L"] - m["outside"][b]))
     # cut terms for nets touching the border
     for j, (w_e, touch, fixed_blocks) in enumerate(m["nets"]):
         yn = f"y{j}"
-        model.variables.add(names=[yn], types="B", obj=[float(w_e)])
+        names.append(yn)
+        types.append("B")
+        obj.append(float(w_e))
         zvars = []
         for b in range(k):
             if b in fixed_blocks:
                 continue                  # block b certainly present: constant below
             zn = f"z{j}_{b}"
             zvars.append(zn)
-            model.variables.add(names=[zn], types="B", obj=[0.0])
+            names.append(zn)
+            types.append("B")
+            obj.append(0.0)
             for v in touch:
-                model.linear_constraints.add(
-                    lin_expr=[cplex.SparsePair([zn, xname[idx[v]][b]], [1.0, -1.0])],
-                    senses="G", rhs=[0.0])
+                rows.append(cplex.SparsePair([zn, xname[idx[v]][b]], [1.0, -1.0]))
+                senses.append("G")
+                rhs.append(0.0)
         # sum z + n_fixed <= 1 + (k-1) * y  =>  net cut iff > 1 block present
-        model.linear_constraints.add(
-            lin_expr=[cplex.SparsePair(zvars + [yn], [1.0] * len(zvars) + [-(k - 1.0)])],
-            senses="L", rhs=[1.0 - len(fixed_blocks)])
+        rows.append(cplex.SparsePair(zvars + [yn], [1.0] * len(zvars) + [-(k - 1.0)]))
+        senses.append("L")
+        rhs.append(1.0 - len(fixed_blocks))
+    model.variables.add(names=names, types="".join(types), obj=obj)
+    model.linear_constraints.add(lin_expr=rows, senses="".join(senses), rhs=rhs)
     # MIP start: the baseline assignment
     start_ind, start_val = [], []
     for v in border:
@@ -140,7 +155,7 @@ def _solve_cplex(m: dict, ilp_time_s: float, workers: int):
     try:
         model.MIP_starts.add(cplex.SparsePair(start_ind, start_val),
                              model.MIP_starts.effort_level.solve_MIP)
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass
     model.solve()
     return {v: max(range(k), key=lambda b: model.solution.get_values(xname[idx[v]][b]))
